@@ -22,6 +22,7 @@ import { ExifTransform } from '../interfaces/exif-transform.interface';
 import { HammerStatic } from '../utils/hammer.utils';
 import { MoveTypes } from '../interfaces/move-start.interface';
 import {ImageCropperService} from "../services/image-cropper.service";
+import {CropperMovedEvent} from "../interfaces/cropper-moved-event.interface";
 
 @Component({
     selector: 'image-cropper',
@@ -93,6 +94,7 @@ export class ImageCropperComponent implements OnChanges, OnInit {
     @Input() disabled = false;
 
     @Output() imageCropped = new EventEmitter<ImageCroppedEvent>();
+    @Output() cropperMoved = new EventEmitter<CropperMovedEvent>();
     @Output() startCropImage = new EventEmitter<void>();
     @Output() imageLoaded = new EventEmitter<void>();
     @Output() cropperReady = new EventEmitter<Dimensions>();
@@ -636,11 +638,25 @@ export class ImageCropperComponent implements OnChanges, OnInit {
         }
     }
 
+    private emitCropperMoved() {
+        const imagePosition = this.getImagePosition();
+        const width = imagePosition.x2 - imagePosition.x1;
+        const height = imagePosition.y2 - imagePosition.y1;
+
+        this.cropperMoved.emit({
+            width, height,
+            imagePosition,
+            cropperPosition: {...this.cropper},
+            offsetImagePosition: this.containWithinAspectRatio ? this.getOffsetImagePosition() : undefined,
+        });
+    }
+
     @HostListener('document:mouseup')
     @HostListener('document:touchend')
     moveStop(): void {
         if (this.moveStart.active) {
             this.moveStart.active = false;
+            this.emitCropperMoved();
             this.doAutoCrop();
         }
     }
@@ -648,6 +664,7 @@ export class ImageCropperComponent implements OnChanges, OnInit {
     pinchStop(): void {
         if (this.moveStart.active) {
             this.moveStart.active = false;
+            this.emitCropperMoved();
             this.doAutoCrop();
         }
     }
